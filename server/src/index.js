@@ -22,6 +22,27 @@ if (!process.env.JWT_SECRET || process.env.JWT_SECRET.length < 32) throw new Err
 app.use(cors({ origin: process.env.CORS_ORIGIN || "*" }));
 app.use(express.json({ limit: "2mb" }));
 app.disable("x-powered-by");
+
+// Provision a dedicated administrator only from private server environment variables.
+async function ensureBootstrapAdmin() {
+  const username = String(process.env.ADMIN_USERNAME || "").trim();
+  const password = String(process.env.ADMIN_PASSWORD || "");
+  if (!username && !password) return;
+  if (!/^[A-Za-z0-9_]{3,32}$/.test(username) || password.length < 8 || password.length > 72) {
+    throw new Error("ADMIN_USERNAME must be 3-32 letters/numbers/underscores and ADMIN_PASSWORD 8-72 characters");
+  }
+  await pool.query("ALTER TABLE users ADD COLUMN IF NOT EXISTS username VARCHAR(32)");
+  await pool.query("CREATE UNIQUE INDEX IF NOT EXISTS idx_users_username_unique ON users(LOWER(username)) WHERE username IS NOT NULL");
+  const hash = await bcrypt.hash(password, 12);
+  const email = username.toLowerCase() + "@admin.dkconnect.local";
+  const found = await pool.query("SELECT id FROM users WHERE LOWER(username)=LOWER($1) OR email=$2 LIMIT 1", [username, email]);
+  if (found.rows[0]) {
+    await pool.query("UPDATE users SET username=$1,display_name=$1,email=$2,password_hash=$3,role='admin' WHERE id=$4", [username, email, hash, found.rows[0].id]);
+  } else {
+    await pool.query("INSERT INTO users(username,display_name,email,password_hash,role) VALUES($1,$1,$2,$3,'admin')", [username, email, hash]);
+  }
+  console.log("Bootstrap admin account ready: " + username);
+}
 app.set("trust proxy", 1);
 
 const UPLOAD_DIR = process.env.UPLOAD_DIR || path.join(__dirname, "..", "uploads");
@@ -121,11 +142,11 @@ app.post("/api/auth/register", rateLimit({ max: 8 }), async (req, res) => {
 });
 
 app.post("/api/auth/login", rateLimit({ max: 12 }), async (req, res) => {
-  const email = String(req.body?.email || "").trim().toLowerCase();
+  const identifier = String(req.body?.username || req.body?.email || "").trim();
   const password = String(req.body?.password || "");
-  if (!email || !password) return res.status(400).json({ error: "MISSING_CREDENTIALS" });
+  if (!identifier || !password) return res.status(400).json({ error: "MISSING_CREDENTIALS" });
   try {
-    const { rows } = await pool.query("SELECT id,display_name,email,password_hash,role,avatar_url FROM users WHERE email=$1", [email]);
+    const { rows } = await pool.query("SELECT id,display_name,email,password_hash,role,avatar_url FROM users WHERE LOWER(email)=LOWER($1) OR LOWER(username)=LOWER($1) LIMIT 1", [identifier]);
     const user = rows[0];
     if (!user || !(await bcrypt.compare(password, user.password_hash))) return res.status(401).json({ error: "INVALID_CREDENTIALS", message: "Email hoặc mật khẩu không đúng." });
     delete user.password_hash;
@@ -435,5 +456,10 @@ app.use((err, _req, res, _next) => {
   res.status(500).json({ error: "INTERNAL_SERVER_ERROR" });
 });
 
-if (require.main === module) server.listen(PORT, () => console.log(`DK Connect API listening on ${PORT}`));
+if (require.main === module) {
+  (async () => {
+    await ensureBootstrapAdmin();
+    server.listen(PORT, () => console.log(`DK Connect API listening on ${PORT}`));
+  })().catch(error => { console.error("DK Connect startup failed:", error.message); process.exit(1); });
+}
 module.exports = { app, server, pool, io };
