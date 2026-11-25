@@ -51,7 +51,7 @@ test("admin routes enforce a database-backed role and expose moderation controls
   assert.match(app, /async function requireAdmin/);
   assert.match(app, /ADMIN_USERNAME/);
   assert.match(app, /ADMIN_PASSWORD/);
-  assert.match(app, /LOWER\\(username\\)=LOWER\\(\\$1\\)/);
+  assert.match(app, /LOWER\(username\)=LOWER\(\$1\)/);
   assert.match(app, /SELECT role FROM users WHERE id=\$1/);
   assert.match(app, /app\.get\("\/api\/admin\/commands", auth, requireAdmin/);
   assert.match(app, /app\.post\("\/api\/admin\/settings\/anti-recall", auth, requireAdmin/);
