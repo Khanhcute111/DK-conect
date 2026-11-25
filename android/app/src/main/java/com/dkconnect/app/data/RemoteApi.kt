@@ -16,6 +16,8 @@ import org.json.JSONArray
 import org.json.JSONObject
 import java.util.concurrent.TimeUnit
 
+data class DkProfile(val id: String, val name: String, val email: String, val role: String)
+
 data class DkFriend(
     val id: String,
     val name: String,
@@ -59,6 +61,11 @@ class RemoteApi(private val token: String, private val baseUrl: String = ApiConf
             }
             json
         }
+    }
+
+    suspend fun me(): DkProfile {
+        val user = execute(request("api/me").get()).getJSONObject("user")
+        return DkProfile(user.optString("id"), user.optString("display_name", "Người dùng"), user.optString("email"), user.optString("role", "user"))
     }
 
     suspend fun friends(): List<DkFriend> {
