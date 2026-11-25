@@ -1,0 +1,9 @@
+.gradle/
+.idea/
+local.properties
+**/build/
+node_modules/
+.env
+.DS_Store
+
+server/uploads/
