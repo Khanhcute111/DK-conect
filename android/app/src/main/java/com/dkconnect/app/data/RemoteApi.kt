@@ -123,8 +123,8 @@ class RemoteApi(private val token: String, private val baseUrl: String = ApiConf
     private suspend fun upload(context: Context, uri: Uri, path: String, caption: String? = null): JSONObject = withContext(Dispatchers.IO) {
         val resolver = context.contentResolver
         val mime = resolver.getType(uri) ?: "application/octet-stream"
-        val allowed = mime.startsWith("image/") || mime.startsWith("video/")
-        require(allowed) { "Chỉ hỗ trợ ảnh hoặc video." }
+        val allowed = mime in setOf("image/jpeg", "image/png", "image/webp", "image/heic", "image/heif", "video/mp4", "video/quicktime", "video/webm")
+        require(allowed) { "Định dạng chưa hỗ trợ. Hãy chọn JPG, PNG, WebP, HEIC, HEIF, MP4, MOV hoặc WebM." }
         val size = resolver.query(uri, arrayOf(OpenableColumns.SIZE), null, null, null)?.use { cursor ->
             if (cursor.moveToFirst()) cursor.getLong(0) else -1L
         } ?: -1L
