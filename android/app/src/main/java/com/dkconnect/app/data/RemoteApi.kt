@@ -141,7 +141,7 @@ class RemoteApi(private val token: String, private val baseUrl: String = ApiConf
         val multipart = MultipartBody.Builder().setType(MultipartBody.FORM)
             .apply { if (caption != null) addFormDataPart("caption", caption) }
             .addFormDataPart("media", filename, fileBody).build()
-        client.newCall(request(path).post(multipart).build()).execute().use { response ->
+        client.newCall(request(path).post(multipart)).execute().use { response ->
             val raw = response.body?.string().orEmpty(); val json = JSONObject(raw.ifBlank { "{}" })
             if (!response.isSuccessful) throw IllegalStateException(json.optString("error", "Tải media thất bại (${response.code})"))
             json
