@@ -1,0 +1,97 @@
+name: Extract source and verify DK Connect
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "DKConnect-source (1).zip"
+      - ".github/workflows/bootstrap.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: dkconnect-bootstrap
+  cancel-in-progress: false
+
+jobs:
+  extract-and-test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Extract uploaded source archive
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -f "DKConnect-source (1).zip"
+          mkdir -p /tmp/dkconnect-source
+          unzip -q "DKConnect-source (1).zip" -d /tmp/dkconnect-source
+          test -f /tmp/dkconnect-source/DKConnect/server/package.json
+          test -f /tmp/dkconnect-source/DKConnect/android/settings.gradle.kts
+          cp -a /tmp/dkconnect-source/DKConnect/. .
+          test -f server/src/index.js
+          test -f android/app/src/main/java/com/dkconnect/app/MainActivity.kt
+
+      - name: Commit extracted project files
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A -- . ':!DKConnect-source (1).zip'
+          if ! git diff --cached --quiet; then
+            git commit -m "Extract DK Connect source project"
+            git push origin HEAD:main
+          else
+            echo "No extracted source changes to commit."
+          fi
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Install backend dependencies
+        working-directory: server
+        run: npm install
+
+      - name: Check backend syntax
+        working-directory: server
+        run: node --check src/index.js
+
+      - name: Run backend tests
+        working-directory: server
+        run: npm test
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - name: Set up Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Install Android SDK packages
+        run: sdkmanager "platforms;android-35" "build-tools;35.0.0"
+
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: "8.9"
+
+      - name: Build Android debug APK
+        working-directory: android
+        run: gradle assembleDebug
+
+      - name: Upload debug APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: DKConnect-debug-apk
+          path: android/app/build/outputs/apk/debug/*.apk
+          if-no-files-found: error
