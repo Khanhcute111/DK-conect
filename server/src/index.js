@@ -468,6 +468,6 @@ if (require.main === module) {
     await pool.query(fs.readFileSync(schemaPath, "utf8"));
     await ensureBootstrapAdmin();
     server.listen(PORT, () => console.log(`DK Connect API listening on ${PORT}`));
-  })().catch(error => { console.error("DK Connect startup failed:", error.message); process.exit(1); });
+  })().catch(error => { console.error("DK Connect startup failed:", error?.stack || error); console.error("DATABASE_URL configured:", Boolean(process.env.DATABASE_URL)); process.exit(1); });
 }
 module.exports = { app, server, pool, io };
