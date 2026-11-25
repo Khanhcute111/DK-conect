@@ -1,6 +1,7 @@
 CREATE TABLE IF NOT EXISTS users (
   id BIGSERIAL PRIMARY KEY,
   display_name VARCHAR(80) NOT NULL,
+  username VARCHAR(32),
   email VARCHAR(255) UNIQUE NOT NULL,
   password_hash TEXT NOT NULL,
   role VARCHAR(16) NOT NULL DEFAULT 'user' CHECK (role IN ('user','admin')),
@@ -35,6 +36,8 @@ CREATE INDEX IF NOT EXISTS idx_moments_time ON moments(created_at DESC);
 
 
 ALTER TABLE users ADD COLUMN IF NOT EXISTS role VARCHAR(16) NOT NULL DEFAULT 'user';
+ALTER TABLE users ADD COLUMN IF NOT EXISTS username VARCHAR(32);
+CREATE UNIQUE INDEX IF NOT EXISTS idx_users_username_unique ON users(LOWER(username)) WHERE username IS NOT NULL;
 CREATE TABLE IF NOT EXISTS app_settings (
   setting_key VARCHAR(80) PRIMARY KEY,
   setting_value JSONB NOT NULL,
