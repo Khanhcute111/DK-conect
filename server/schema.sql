@@ -88,5 +88,3 @@ ALTER TABLE messages ADD COLUMN IF NOT EXISTS recalled_at TIMESTAMPTZ;
 ALTER TABLE messages ADD COLUMN IF NOT EXISTS client_id UUID;
 CREATE UNIQUE INDEX IF NOT EXISTS idx_messages_sender_client ON messages(sender_id, client_id) WHERE client_id IS NOT NULL;
 
-CREATE EXTENSION IF NOT EXISTS pg_trgm;
-CREATE INDEX IF NOT EXISTS idx_users_display_name_trgm ON users USING GIN (display_name gin_trgm_ops);
