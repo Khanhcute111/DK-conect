@@ -179,7 +179,7 @@ fun AuthScreen(baseUrl: String, onBaseUrlChange: (String) -> Unit, onAuthenticat
             Spacer(Modifier.height(14.dp)); OutlinedTextField(value = baseUrl, onValueChange = onBaseUrlChange, label = { Text("Địa chỉ máy chủ API") }, placeholder = { Text("https://api-cua-ban.onrender.com/") }, singleLine = true, modifier = Modifier.fillMaxWidth())
             Spacer(Modifier.height(20.dp)); Text(if (register) "Tạo tài khoản" else "Chào mừng trở lại", color = Color.White, fontSize = 23.sp, fontWeight = FontWeight.Bold)
             if (register) { Spacer(Modifier.height(12.dp)); OutlinedTextField(displayName, { displayName = it }, label = { Text("Tên hiển thị") }, singleLine = true, modifier = Modifier.fillMaxWidth()) }
-            Spacer(Modifier.height(18.dp)); OutlinedTextField(email, { email = it; error = null }, label = { Text("Email") }, singleLine = true, modifier = Modifier.fillMaxWidth())
+            Spacer(Modifier.height(18.dp)); OutlinedTextField(email, { email = it; error = null }, label = { Text(if (register) "Email" else "Email hoặc tên tài khoản admin") }, singleLine = true, modifier = Modifier.fillMaxWidth())
             Spacer(Modifier.height(12.dp)); OutlinedTextField(password, { password = it; error = null }, label = { Text("Mật khẩu (ít nhất 8 ký tự)") }, visualTransformation = PasswordVisualTransformation(), singleLine = true, modifier = Modifier.fillMaxWidth())
             error?.let { Text(it, color = Color(0xFFFF8B9A), fontSize = 12.sp, modifier = Modifier.padding(top = 9.dp)) }
             Spacer(Modifier.height(20.dp)); Button(enabled = !busy, onClick = {
