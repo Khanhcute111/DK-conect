@@ -97,7 +97,7 @@ function signToken(user) {
   return jwt.sign({ sub: String(user.id) }, process.env.JWT_SECRET, { expiresIn: "14d", issuer: "dkconnect", audience: "dkconnect-app" });
 }
 function auth(req, res, next) {
-  const token = (req.headers.authorization || "").replace(/^Bearer\s+/i, "");
+  const token = (req.headers.authorization || "").replace(/^Bearer\\s+/i, "");
   try {
     req.user = jwt.verify(token, process.env.JWT_SECRET, { issuer: "dkconnect", audience: "dkconnect-app" });
     next();
@@ -116,7 +116,7 @@ async function canChat(a, b) {
      AND ((user_id=$1 AND friend_id=$2) OR (user_id=$2 AND friend_id=$1)) LIMIT 1`, [a, b]);
   return rows.length > 0;
 }
-function validId(value) { return /^\d+$/.test(String(value || "")) && Number(value) > 0; }
+function validId(value) { return /^\\d+$/.test(String(value || "")) && Number(value) > 0; }
 
 app.get("/health", async (_req, res) => {
   try { await pool.query("SELECT 1"); res.json({ ok: true, service: "dkconnect-api", database: "connected" }); }
@@ -127,7 +127,7 @@ app.post("/api/auth/register", rateLimit({ max: 8 }), async (req, res) => {
   const displayName = String(req.body?.displayName || "").trim();
   const email = String(req.body?.email || "").trim().toLowerCase();
   const password = String(req.body?.password || "");
-  if (displayName.length < 2 || displayName.length > 80 || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) || email.length > 255 || password.length < 8 || password.length > 72)
+  if (displayName.length < 2 || displayName.length > 80 || !/^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/.test(email) || email.length > 255 || password.length < 8 || password.length > 72)
     return res.status(400).json({ error: "INVALID_REGISTRATION", message: "Tên 2–80 ký tự, email hợp lệ và mật khẩu 8–72 ký tự là bắt buộc." });
   try {
     const hash = await bcrypt.hash(password, 12);
@@ -154,14 +154,6 @@ app.post("/api/auth/login", rateLimit({ max: 12 }), async (req, res) => {
   } catch { res.status(500).json({ error: "LOGIN_FAILED" }); }
 });
 
-app.get("/api/me", auth, async (req, res) => {
-  try {
-    const { rows } = await pool.query("SELECT id,display_name,email,avatar_url,role FROM users WHERE id=$1", [req.user.sub]);
-    if (!rows[0]) return res.status(404).json({ error: "USER_NOT_FOUND" });
-    res.json({ user: rows[0] });
-  } catch { res.status(500).json({ error: "PROFILE_FAILED" }); }
-});
-
 // User discovery: only expose public profile fields, never email or credentials.
 app.get("/api/users", auth, async (req, res) => {
   const q = String(req.query.q || "").trim().slice(0, 80);
@@ -170,9 +162,17 @@ app.get("/api/users", auth, async (req, res) => {
     const { rows } = await pool.query(
       `SELECT id,display_name,avatar_url FROM users
        WHERE id<>$1 AND (display_name ILIKE $2 OR id::text=$3)
-       ORDER BY display_name LIMIT 30`, [req.user.sub, `%${q.replace(/[\\%_]/g, "\\$&")}%`, q]);
+       ORDER BY display_name LIMIT 30`, [req.user.sub, `%${q.replace(/[\\\\%_]/g, "\\\\$&")}%`, q]);
     res.json({ users: rows });
   } catch { res.status(500).json({ error: "USER_SEARCH_FAILED" }); }
+});
+
+app.get("/api/me", auth, async (req, res) => {
+  try {
+    const { rows } = await pool.query("SELECT id,display_name,email,avatar_url,role FROM users WHERE id=$1", [req.user.sub]);
+    if (!rows[0]) return res.status(404).json({ error: "USER_NOT_FOUND" });
+    res.json({ user: rows[0] });
+  } catch { res.status(500).json({ error: "PROFILE_FAILED" }); }
 });
 
 // Friend requests are directional until accepted; chat is enabled only after acceptance.
@@ -244,6 +244,7 @@ app.post("/api/messages/:userId/read", auth, async (req, res) => {
     res.json({ updated: result.rowCount });
   } catch { res.status(500).json({ error: "MARK_READ_FAILED" }); }
 });
+
 app.post("/api/messages/:userId", auth, async (req, res) => {
   const peer = req.params.userId;
   const body = String(req.body?.body || "").trim();
@@ -458,6 +459,9 @@ app.use((err, _req, res, _next) => {
 
 if (require.main === module) {
   (async () => {
+    // Apply the checked-in SQL schema before creating the bootstrap administrator.
+    const schemaPath = path.join(__dirname, "..", "schema.sql");
+    await pool.query(fs.readFileSync(schemaPath, "utf8"));
     await ensureBootstrapAdmin();
     server.listen(PORT, () => console.log(`DK Connect API listening on ${PORT}`));
   })().catch(error => { console.error("DK Connect startup failed:", error.message); process.exit(1); });
