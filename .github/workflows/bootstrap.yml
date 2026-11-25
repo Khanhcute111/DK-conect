@@ -6,6 +6,8 @@ on:
     paths:
       - "DKConnect-source (1).zip"
       - ".github/workflows/bootstrap.yml"
+      - "android/**"
+      - "server/**"
   workflow_dispatch:
 
 permissions:
@@ -33,7 +35,10 @@ jobs:
           unzip -q "DKConnect-source (1).zip" -d /tmp/dkconnect-source
           test -f /tmp/dkconnect-source/DKConnect/server/package.json
           test -f /tmp/dkconnect-source/DKConnect/android/settings.gradle.kts
-          cp -a /tmp/dkconnect-source/DKConnect/. .
+          # The ZIP is an initial import only. Never overwrite fixes already committed to the repository.
+          if [ ! -f server/package.json ] || [ ! -f android/app/src/main/java/com/dkconnect/app/MainActivity.kt ]; then
+            cp -an /tmp/dkconnect-source/DKConnect/. .
+          fi
           test -f server/src/index.js
           test -f android/app/src/main/java/com/dkconnect/app/MainActivity.kt
 
