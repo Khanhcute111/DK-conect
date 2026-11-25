@@ -3,26 +3,19 @@ services:
     name: dk-connect-api
     runtime: docker
     plan: free
-    region: singapore
+    region: virginia
     dockerfilePath: ./server/Dockerfile
     dockerContext: ./server
     healthCheckPath: /health
     autoDeployTrigger: checksPass
     envVars:
       - key: DATABASE_URL
-        fromDatabase:
-          name: dk-connect-db
-          property: connectionString
+        sync: false
+      - key: PGOPTIONS
+        value: "-c search_path=dkconnect"
       - key: JWT_SECRET
         generateValue: true
       - key: ADMIN_USERNAME
         sync: false
       - key: ADMIN_PASSWORD
         sync: false
-
-databases:
-  - name: dk-connect-db
-    databaseName: dkconnect
-    user: dkconnect
-    plan: free
-    region: singapore
