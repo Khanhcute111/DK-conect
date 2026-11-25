@@ -65,15 +65,9 @@ Mở thư mục `android/` bằng Android Studio (JDK 17, Android SDK 35). Cấu
 
 Không đưa `.env`, JWT secret hoặc thông tin database vào GitHub.
 
-## Cấp quyền admin
+## Tài khoản quản trị riêng
 
-Tạo tài khoản bình thường trước, sau đó người vận hành database cấp quyền cho đúng tài khoản:
-
-```sql
-UPDATE users SET role = 'admin' WHERE email = 'email-da-xac-minh@example.com';
-```
-
-Ứng dụng không có chức năng tự nâng quyền. API quản trị kiểm tra role trực tiếp từ database.
+Tạo tài khoản admin bằng hai biến môi trường bí mật trên máy chủ: `ADMIN_USERNAME` và `ADMIN_PASSWORD`. Khi backend khởi động, tài khoản được tạo hoặc cập nhật với role `admin`; đăng nhập bằng username hoặc email đều được. Không đặt mật khẩu trong mã nguồn, README hoặc GitHub. Xoá cả hai biến môi trường để tắt bootstrap. Đăng ký công khai luôn tạo role `user`; API quản trị kiểm tra role trực tiếp từ database.
 
 ## Kiểm thử
 
