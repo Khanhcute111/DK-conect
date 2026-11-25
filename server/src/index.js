@@ -99,7 +99,7 @@ function signToken(user) {
   return jwt.sign({ sub: String(user.id) }, process.env.JWT_SECRET, { expiresIn: "14d", issuer: "dkconnect", audience: "dkconnect-app" });
 }
 function auth(req, res, next) {
-  const token = (req.headers.authorization || "").replace(/^Bearer\\s+/i, "");
+  const token = (req.headers.authorization || "").replace(/^Bearer\s+/i, "");
   try {
     req.user = jwt.verify(token, process.env.JWT_SECRET, { issuer: "dkconnect", audience: "dkconnect-app" });
     next();
@@ -118,7 +118,7 @@ async function canChat(a, b) {
      AND ((user_id=$1 AND friend_id=$2) OR (user_id=$2 AND friend_id=$1)) LIMIT 1`, [a, b]);
   return rows.length > 0;
 }
-function validId(value) { return /^\\d+$/.test(String(value || "")) && Number(value) > 0; }
+function validId(value) { return /^\d+$/.test(String(value || "")) && Number(value) > 0; }
 
 app.get("/health", async (_req, res) => {
   try { await pool.query("SELECT 1"); res.json({ ok: true, service: "dkconnect-api", database: "connected" }); }
@@ -129,7 +129,7 @@ app.post("/api/auth/register", rateLimit({ max: 8 }), async (req, res) => {
   const displayName = String(req.body?.displayName || "").trim();
   const email = String(req.body?.email || "").trim().toLowerCase();
   const password = String(req.body?.password || "");
-  if (displayName.length < 2 || displayName.length > 80 || !/^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/.test(email) || email.length > 255 || password.length < 8 || password.length > 72)
+  if (displayName.length < 2 || displayName.length > 80 || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) || email.length > 255 || password.length < 8 || password.length > 72)
     return res.status(400).json({ error: "INVALID_REGISTRATION", message: "Tên 2–80 ký tự, email hợp lệ và mật khẩu 8–72 ký tự là bắt buộc." });
   try {
     const hash = await bcrypt.hash(password, 12);
