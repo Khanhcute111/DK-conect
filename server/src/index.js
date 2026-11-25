@@ -160,19 +160,16 @@ app.post("/api/auth/login", rateLimit({ max: 12 }), async (req, res) => {
 app.get("/api/users", auth, async (req, res) => {
   const q = String(req.query.q || "").trim().slice(0, 80);
   if (q.length < 2) return res.json({ users: [] });
-  const uidMatch = q.match(/^DK0*(\\d+)$/i);
+  const uidMatch = q.match(/^DK0*([0-9]+)$/i);
   const lookupId = uidMatch ? uidMatch[1] : q;
   try {
+    const escaped = q.replace(/[%_]/g, "\\$&");
     const { rows } = await pool.query(
       `SELECT id,display_name,avatar_url FROM users
        WHERE id<>$1 AND (display_name ILIKE $2 OR id::text=$3)
-       ORDER BY display_name LIMIT 30`, [req.user.sub, `%${q.replace(/[\\\\%_]/g, "\\\\  const q = String(req.query.q || "").trim().slice(0, 80);
-  if (q.length < 2) return res.json({ users: [] });
-  try {
-    const { rows } = await pool.query(
-      `SELECT id,display_name,avatar_url FROM users
-       WHERE id<>$1 AND (display_name ILIKE $2 OR id::text=$3)
-       ORDER BY display_name LIMIT 30`, [req.user.sub, `%${q.replace(/[\\\\%_]/g, "\\\\$&")}%`, q]);")}%`, lookupId]);
+       ORDER BY display_name LIMIT 30`,
+      [req.user.sub, `%${escaped}%`, lookupId]
+    );
     res.json({ users: rows });
   } catch { res.status(500).json({ error: "USER_SEARCH_FAILED" }); }
 });
