@@ -57,6 +57,8 @@ import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalClipboardManager
+import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.style.TextOverflow
@@ -150,7 +152,7 @@ fun DKConnectApp() {
                             "Tin nhắn" -> ChatScreen(accent, motionEnabled, authToken, apiBaseUrl, activePeer, realtime, onPeer = { activePeer = it })
                             "Bạn bè" -> FriendsScreen(accent, authToken, apiBaseUrl, realtime, onChat = { activePeer = it; selected = "Tin nhắn" })
                             "Cuộc gọi" -> CallsScreen(accent)
-                            else -> ProfileScreen(accent, onSettings = { showSettings = true })
+                            else -> ProfileScreen(accent, authToken, apiBaseUrl, onSettings = { showSettings = true })
                         }
                     }
                 }
@@ -558,16 +560,45 @@ fun CallsScreen(accent: Color) {
 }
 
 @Composable
-fun ProfileScreen(accent: Color, onSettings: () -> Unit) {
-    Column(Modifier.fillMaxSize()) {
-        Header("Cá nhân", "Không gian riêng của bạn", accent)
+fun ProfileScreen(accent: Color, token: String, baseUrl: String, onSettings: () -> Unit) {
+    val scope = rememberCoroutineScope()
+    val clipboard = LocalClipboardManager.current
+    val api = remember(token, baseUrl) { RemoteApi(token, baseUrl) }
+    var profile by remember(token, baseUrl) { mutableStateOf<com.dkconnect.app.data.DkProfile?>(null) }
+    var error by remember { mutableStateOf<String?>(null) }
+    LaunchedEffect(token, baseUrl) {
+        try { profile = api.me(); error = null }
+        catch (e: Exception) { error = e.message ?: "Không tải được hồ sơ." }
+    }
+    val uid = profile?.id?.toLongOrNull()?.let { "DK" + it.toString().padStart(8, '0') } ?: "Đang tải UID…"
+    Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState())) {
+        Header("Cá nhân", "Hồ sơ tài khoản DK Connect", accent)
         Column(Modifier.fillMaxWidth().padding(top = 14.dp), horizontalAlignment = Alignment.CenterHorizontally) {
-            Box(Modifier.size(94.dp).background(Brush.linearGradient(listOf(accent, Cyan, Pink)), CircleShape), Alignment.Center) { Text("DK", color = Color.White, fontSize = 29.sp, fontWeight = FontWeight.Black) }
-            Spacer(Modifier.height(12.dp)); Text("Tài khoản DK Connect", fontSize = 20.sp, fontWeight = FontWeight.Bold); Text("Thiết lập hồ sơ sau khi đăng nhập", color = Muted, fontSize = 11.sp)
+            Box(Modifier.size(94.dp).background(Brush.linearGradient(listOf(accent, Cyan, Pink)), CircleShape), Alignment.Center) {
+                Text(profile?.name?.take(1)?.uppercase() ?: "DK", color = Color.White, fontSize = 29.sp, fontWeight = FontWeight.Black)
+            }
+            Spacer(Modifier.height(12.dp))
+            Text(profile?.name ?: "Đang tải hồ sơ…", fontSize = 20.sp, fontWeight = FontWeight.Bold)
+            Text(profile?.email ?: (error ?: "Đang lấy thông tin từ máy chủ"), color = Muted, fontSize = 11.sp)
+            Spacer(Modifier.height(18.dp))
+            Card(Modifier.fillMaxWidth().padding(horizontal = 18.dp), colors = CardDefaults.cardColors(containerColor = Panel), shape = RoundedCornerShape(20.dp)) {
+                Column(Modifier.padding(16.dp)) {
+                    Text("UID CỦA BẠN", color = Muted, fontSize = 10.sp, fontWeight = FontWeight.Bold)
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Text(uid, modifier = Modifier.weight(1f), fontSize = 22.sp, fontWeight = FontWeight.ExtraBold, color = accent)
+                        IconButton(onClick = { if (profile != null) clipboard.setText(AnnotatedString(uid)) }, enabled = profile != null) {
+                            Icon(Icons.Default.ContentCopy, "Sao chép UID", tint = accent)
+                        }
+                    }
+                    Text("Chia sẻ UID này để người khác tìm và gửi lời mời kết bạn.", color = Muted, fontSize = 11.sp)
+                }
+            }
         }
-        Spacer(Modifier.height(22.dp))
-        listOf("Chỉnh sửa hồ sơ" to Icons.Default.Edit, "Giao diện & hình nền" to Icons.Default.Palette, "Quyền riêng tư" to Icons.Default.Security, "Thông báo" to Icons.Default.Notifications, "Thiết bị đã đăng nhập" to Icons.Default.Devices, "Trợ giúp và phản hồi" to Icons.Default.Help).forEach { (label, icon) ->
-            Row(Modifier.fillMaxWidth().clickable { if (label == "Giao diện & hình nền") onSettings() }.padding(horizontal = 22.dp, vertical = 14.dp), verticalAlignment = Alignment.CenterVertically) { Icon(icon, null, tint = accent); Text(label, modifier = Modifier.weight(1f).padding(start = 14.dp)); Icon(Icons.Default.ChevronRight, null, tint = Muted) }
+        Spacer(Modifier.height(18.dp))
+        listOf("Giao diện & hình nền" to Icons.Default.Palette, "Quyền riêng tư" to Icons.Default.Security, "Thông báo" to Icons.Default.Notifications, "Trợ giúp và phản hồi" to Icons.Default.Help).forEach { (label, icon) ->
+            Row(Modifier.fillMaxWidth().clickable { if (label == "Giao diện & hình nền") onSettings() }.padding(horizontal = 22.dp, vertical = 14.dp), verticalAlignment = Alignment.CenterVertically) {
+                Icon(icon, null, tint = accent); Text(label, modifier = Modifier.weight(1f).padding(start = 14.dp)); Icon(Icons.Default.ChevronRight, null, tint = Muted)
+            }
         }
     }
 }
