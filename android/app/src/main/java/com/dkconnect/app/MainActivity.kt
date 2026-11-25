@@ -575,8 +575,9 @@ fun CallsScreen(accent: Color) {
 
 @Composable
 fun ProfileScreen(accent: Color, token: String, baseUrl: String, onSettings: () -> Unit) {
-    val scope = rememberCoroutineScope()
     val clipboard = LocalClipboardManager.current
+    var openedSection by remember { mutableStateOf<String?>(null) }
+    var feedbackText by remember { mutableStateOf("") }
     val api = remember(token, baseUrl) { RemoteApi(token, baseUrl) }
     var profile by remember(token, baseUrl) { mutableStateOf<com.dkconnect.app.data.DkProfile?>(null) }
     var error by remember { mutableStateOf<String?>(null) }
@@ -610,10 +611,44 @@ fun ProfileScreen(accent: Color, token: String, baseUrl: String, onSettings: () 
         }
         Spacer(Modifier.height(18.dp))
         listOf("Giao diện & hình nền" to Icons.Default.Palette, "Quyền riêng tư" to Icons.Default.Security, "Thông báo" to Icons.Default.Notifications, "Trợ giúp và phản hồi" to Icons.Default.Help).forEach { (label, icon) ->
-            Row(Modifier.fillMaxWidth().clickable { if (label == "Giao diện & hình nền") onSettings() }.padding(horizontal = 22.dp, vertical = 14.dp), verticalAlignment = Alignment.CenterVertically) {
+            Row(Modifier.fillMaxWidth().clickable { if (label == "Giao diện & hình nền") onSettings() else openedSection = label }.padding(horizontal = 22.dp, vertical = 14.dp), verticalAlignment = Alignment.CenterVertically) {
                 Icon(icon, null, tint = accent); Text(label, modifier = Modifier.weight(1f).padding(start = 14.dp)); Icon(Icons.Default.ChevronRight, null, tint = Muted)
             }
         }
+    }
+    val section = openedSection
+    if (section != null) {
+        AlertDialog(
+            onDismissRequest = { openedSection = null },
+            title = { Text(section) },
+            text = {
+                when (section) {
+                    "Quyền riêng tư" -> Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                        Text("Story chỉ hiển thị với bạn và những người đã kết bạn (đã chấp nhận lời mời).", color = Color.White)
+                        Text("UID là mã tìm kiếm tài khoản. Không chia sẻ mật khẩu hoặc mã đăng nhập.", color = Muted, fontSize = 12.sp)
+                        Text("Tuỳ chọn ẩn hồ sơ và chặn người dùng chưa được triển khai.", color = Muted, fontSize = 12.sp)
+                    }
+                    "Thông báo" -> Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                        Text("Tin nhắn và trạng thái online cập nhật khi ứng dụng đang mở và có kết nối.", color = Color.White)
+                        Text("Thông báo đẩy khi ứng dụng đóng chưa được tích hợp trong phiên bản này.", color = Muted, fontSize = 12.sp)
+                    }
+                    else -> Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                        Text("Mô tả lỗi hoặc góp ý cho DK Connect.", color = Muted, fontSize = 12.sp)
+                        OutlinedTextField(value = feedbackText, onValueChange = { feedbackText = it }, label = { Text("Nội dung phản hồi") }, minLines = 3, modifier = Modifier.fillMaxWidth())
+                        Text("Sao chép nội dung để gửi cho đội phát triển. Phản hồi chưa được gửi tự động lên máy chủ.", color = Muted, fontSize = 10.sp)
+                    }
+                }
+            },
+            confirmButton = {
+                if (section == "Trợ giúp và phản hồi") {
+                    TextButton(onClick = {
+                        clipboard.setText(AnnotatedString("DK Connect - Phản hồi\\nUID: ${uid}\\nNội dung: ${feedbackText.trim()}"))
+                        openedSection = null
+                    }, enabled = feedbackText.isNotBlank()) { Text("Sao chép phản hồi") }
+                } else TextButton(onClick = { openedSection = null }) { Text("Đã hiểu") }
+            },
+            dismissButton = { TextButton(onClick = { openedSection = null }) { Text("Đóng") } }
+        )
     }
 }
 
