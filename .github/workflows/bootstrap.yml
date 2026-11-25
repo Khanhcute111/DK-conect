@@ -43,7 +43,7 @@ jobs:
           set -euo pipefail
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add -A -- . ':!DKConnect-source (1).zip'
+          git add -A -- . ':!DKConnect-source (1).zip' ':!.github/workflows/android.yml' ':!.github/workflows/backend.yml'
           if ! git diff --cached --quiet; then
             git commit -m "Extract DK Connect source project"
             git push origin HEAD:main
