@@ -302,9 +302,9 @@ fun ChatScreen(accent: Color, motionEnabled: Boolean, token: String, baseUrl: St
     var online by remember { mutableStateOf(false) }
     var showCommands by remember { mutableStateOf(false) }
     var adminCommands by remember { mutableStateOf<List<String>>(emptyList()) }
-    var saved by remember { mutableStateOf(prefs(LocalContext.current).getBoolean("chat_saved", true)) }
-    var recallTarget by remember { mutableStateOf<DkMessage?>(null) }
     val context = LocalContext.current
+    var saved by remember { mutableStateOf(prefs(context).getBoolean("chat_saved", true)) }
+    var recallTarget by remember { mutableStateOf<DkMessage?>(null) }
     val stickerPicker = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
         if (uri != null && selectedPeer != null) scope.launch {
             try {
