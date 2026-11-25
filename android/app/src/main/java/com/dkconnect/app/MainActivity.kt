@@ -56,6 +56,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.text.AnnotatedString
@@ -260,7 +261,20 @@ fun MomentsScreen(accent: Color, motionEnabled: Boolean, token: String, baseUrl:
                                 AndroidView(factory = { ctx -> VideoView(ctx).also { view -> view.setVideoURI(Uri.parse(story.mediaUrl)); view.setOnPreparedListener { player -> player.isLooping = true; videoView = view } } }, modifier = Modifier.fillMaxSize())
                                 if (!playing) Icon(Icons.Default.PlayCircle, "Phát video", tint = Color.White, modifier = Modifier.align(Alignment.Center).size(52.dp))
                             }
-                        } else AsyncImage(model = story.mediaUrl, contentDescription = "Story của ${story.name}", modifier = Modifier.fillMaxWidth().heightIn(max = 360.dp).clip(RoundedCornerShape(16.dp)))
+                        } else {
+                            var imageFailed by remember(story.id) { mutableStateOf(false) }
+                            Box(Modifier.fillMaxWidth().heightIn(min = 180.dp, max = 380.dp).clip(RoundedCornerShape(16.dp)).background(Color(0xFF0B0D14)), contentAlignment = Alignment.Center) {
+                                if (imageFailed) {
+                                    Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.padding(18.dp)) {
+                                        Icon(Icons.Default.BrokenImage, null, tint = Muted, modifier = Modifier.size(34.dp))
+                                        Text("Không tải được ảnh Story", color = Color.White, fontSize = 12.sp)
+                                        Text("Có thể tệp đã mất hoặc liên kết không truy cập được.", color = Muted, fontSize = 10.sp)
+                                    }
+                                } else {
+                                    AsyncImage(model = story.mediaUrl, contentDescription = "Story của ${story.name}", contentScale = ContentScale.Fit, onError = { imageFailed = true }, modifier = Modifier.fillMaxWidth().heightIn(min = 180.dp, max = 380.dp))
+                                }
+                            }
+                        }
                         if (story.caption.isNotBlank()) Text(story.caption, color = Color.White, modifier = Modifier.padding(top = 9.dp))
                     }
                 }
