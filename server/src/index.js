@@ -15,7 +15,9 @@ const { spawn } = require("node:child_process");
 const app = express();
 const server = http.createServer(app);
 const io = new Server(server, { cors: { origin: process.env.CORS_ORIGIN || "*" } });
-const pool = new Pool({ connectionString: process.env.DATABASE_URL });
+const DB_SCHEMA = "dkconnect";
+// Keep every unqualified table/query inside DK Connect, isolated from other apps sharing the same PostgreSQL database.
+const pool = new Pool({ connectionString: process.env.DATABASE_URL, options: `-c search_path=${DB_SCHEMA}` });
 const PORT = Number(process.env.PORT || 3000);
 if (!process.env.JWT_SECRET || process.env.JWT_SECRET.length < 32) throw new Error("JWT_SECRET must contain at least 32 characters");
 
@@ -459,7 +461,9 @@ app.use((err, _req, res, _next) => {
 
 if (require.main === module) {
   (async () => {
-    // Apply the checked-in SQL schema before creating the bootstrap administrator.
+    // Create a dedicated namespace first; the connection search_path excludes public so existing app tables are never reused.
+    await pool.query(`CREATE SCHEMA IF NOT EXISTS ${DB_SCHEMA}`);
+    // Apply the checked-in SQL schema inside the DK Connect namespace before creating the bootstrap administrator.
     const schemaPath = path.join(__dirname, "..", "schema.sql");
     await pool.query(fs.readFileSync(schemaPath, "utf8"));
     await ensureBootstrapAdmin();
